@@ -1,0 +1,152 @@
+/* No site header, so the hero should not reserve header height. */
+body[data-look="curve"] .prh.pgx,
+body[data-look="curve"] .prh.pgx-compact {
+  padding-top: var(--s-10);
+}
+
+@media (width <= 1023px) {
+  body[data-look="curve"] .prh.pgx,
+  body[data-look="curve"] .prh.pgx-compact {
+    padding-top: var(--s-8);
+    padding-bottom: calc(var(--s-11) + var(--curve-overlap));
+  }
+}
+
+.claims-marquee {
+  display: contents;
+}
+
+@media (width <= 1023px) {
+  .claims-marquee {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+  }
+
+  html body .pgx-claims[data-ticker] {
+    animation: claims-marquee 22s linear infinite;
+  }
+}
+
+@keyframes claims-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.lead-form {
+  width: 100%;
+}
+
+.lead-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--neutral-0);
+  color: var(--ink-1);
+}
+
+.lead-card[hidden],
+.lead-error[hidden],
+.elig-agree[hidden],
+.lead-thanks[hidden] {
+  display: none;
+}
+
+.lead-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+}
+
+.lead-span {
+  grid-column: 1 / -1;
+}
+
+.lead-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+}
+
+.lead-field .req {
+  margin-left: 2px;
+  color: var(--ink-1);
+}
+
+.lead-field input,
+.lead-field textarea {
+  width: 100%;
+  border: 1.5px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--neutral-50);
+  color: var(--ink-1);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-regular);
+  line-height: 1.4;
+  padding: var(--s-3) var(--s-4);
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.lead-field input {
+  height: var(--ctl-md);
+}
+
+.lead-field textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.lead-field input:focus,
+.lead-field textarea:focus {
+  border-color: var(--focus);
+}
+
+.lead-field input[aria-invalid="true"],
+.lead-field textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+
+.lead-card .btn {
+  width: 100%;
+  margin-top: var(--s-1);
+}
+
+.lead-error {
+  margin: 0;
+  color: var(--bad);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+}
+
+.lead-thanks {
+  margin: var(--s-6) 0 0;
+  color: var(--pr-strong);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  text-align: center;
+}
+
+@media (width <= 640px) {
+  .lead-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .lead-span {
+    grid-column: auto;
+  }
+
+  .lead-card {
+    padding: var(--s-4);
+  }
+}
