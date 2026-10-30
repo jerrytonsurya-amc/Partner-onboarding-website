@@ -15,6 +15,15 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parent
 DB_PATH = ROOT / "data" / "leads.db"
 ADMIN_PASSWORD = "#1234"
+BUSINESS_TYPES = (
+    "Mutual Fund Distributors",
+    "Lending Platforms",
+    "Stock Brokers",
+    "Financial Superapps",
+    "Wealth Managers",
+    "Others",
+)
+EXTRA_COLUMNS = ("mobile", "business_type", "arn", "aum")
 HOST = "127.0.0.1"
 PORT = 8765
 MAX_BODY = 16_384
@@ -32,13 +41,21 @@ def connect():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL DEFAULT '',
+            mobile TEXT NOT NULL DEFAULT '',
             email TEXT NOT NULL,
             company_name TEXT NOT NULL,
+            business_type TEXT NOT NULL DEFAULT '',
+            arn TEXT NOT NULL DEFAULT '',
+            aum TEXT NOT NULL DEFAULT '',
             comments TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL
         )
         """
     )
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(leads)")}
+    for column in EXTRA_COLUMNS:
+        if column not in columns:
+            conn.execute(f"ALTER TABLE leads ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
     return conn
 
 
@@ -47,14 +64,19 @@ def save_lead(lead):
         conn.execute(
             """
             INSERT INTO leads
-                (first_name, last_name, email, company_name, comments, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (first_name, last_name, mobile, email, company_name, business_type, arn, aum,
+                 comments, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 lead["first_name"],
                 lead["last_name"],
+                lead["mobile"],
                 lead["email"],
                 lead["company_name"],
+                lead["business_type"],
+                lead["arn"],
+                lead["aum"],
                 lead["comments"],
                 datetime.now().astimezone().isoformat(timespec="seconds"),
             ),
@@ -81,19 +103,33 @@ def valid_email(value):
     return bool(local and "." in domain and " " not in value)
 
 
+def valid_mobile(value):
+    return len(value) == 10 and value.isdigit() and value[0] in "6789"
+
+
 def parse_lead(payload):
     first_name = clean(payload.get("firstName"), 80)
     last_name = clean(payload.get("lastName"), 80)
+    mobile = clean(payload.get("mobile"), 10)
     email = clean(payload.get("email"), 120)
     company = clean(payload.get("company"), 120)
+    business_type = clean(payload.get("businessType"), 60)
+    arn = clean(payload.get("arn"), 20)
+    aum = clean(payload.get("aum"), 40)
     comments = str(payload.get("comments") or "").strip()[:1000]
     if not first_name or not email or not company or not valid_email(email):
+        return None
+    if not valid_mobile(mobile) or business_type not in BUSINESS_TYPES:
         return None
     return {
         "first_name": first_name,
         "last_name": last_name,
+        "mobile": mobile,
         "email": email,
         "company_name": company,
+        "business_type": business_type,
+        "arn": arn,
+        "aum": aum,
         "comments": comments,
     }
 
@@ -158,8 +194,12 @@ def leads_page(rows):
                 f"<td>{esc(format_when(row['created_at']))}</td>"
                 f"<td>{esc(row['first_name'])}</td>"
                 f"<td>{esc(row['last_name'])}</td>"
+                f"<td>{esc(row['mobile'])}</td>"
                 f"<td><a href=\"mailto:{esc(row['email'])}\">{esc(row['email'])}</a></td>"
                 f"<td>{esc(row['company_name'])}</td>"
+                f"<td>{esc(row['business_type'])}</td>"
+                f"<td>{esc(row['arn'])}</td>"
+                f"<td>{esc(row['aum'])}</td>"
                 f"<td>{esc(row['comments'])}</td>"
                 "</tr>"
             )
@@ -167,7 +207,8 @@ def leads_page(rows):
             '<div class="admin-table-wrap"><table>'
             "<thead><tr>"
             "<th>ID</th><th>Submitted</th><th>First name</th><th>Last name</th>"
-            "<th>Email</th><th>Company name</th><th>Comments</th>"
+            "<th>Mobile</th><th>Email</th><th>Company name</th><th>Nature of business</th>"
+            "<th>ARN</th><th>AUM</th><th>Comments</th>"
             "</tr></thead><tbody>"
             + "".join(body)
             + "</tbody></table></div>"
@@ -281,7 +322,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         lead = parse_lead(payload)
         if lead is None:
-            self.send_json(400, {"error": "First name, email, and company name are required."})
+            self.send_json(400, {"error": "First name, a valid mobile number, email, company name, and nature of business are required."})
             return
         save_lead(lead)
         self.send_json(201, {"ok": True})
